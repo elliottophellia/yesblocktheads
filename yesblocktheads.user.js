@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Yes BlockTheAds
 // @namespace    http://tampermonkey.net/
-// @version      1.0.0
+// @version      1.0.1
 // @description  Kiss the annoying youtube ads goodbye!
 // @author       elliottophellia
 // @license      GPL-3.0
@@ -32,7 +32,10 @@
         'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-ads"]',
         '#related #player-ads', '#related ytd-ad-slot-renderer',
         'ytd-popup-container:has(a[href="/premium"])', 'ad-slot-renderer',
-        'ytm-companion-ad-renderer'
+        'ytm-companion-ad-renderer',
+        'ytd-rich-item-renderer:has(.ytd-display-ad-renderer)',
+        '.ytd-banner-promo-renderer',
+        'ytd-statement-banner-renderer'
     ];
 
     const log = (message) => console.log(`${tag}[${getTimestamp()}] ${message}`);
@@ -119,13 +122,51 @@
                     debug('Skipped ad for special case');
                     return;
                 }
-                simulateInteraction(skipBtn);
+                if ('ontouchstart' in window) {
+                    simulateTouchEvent(skipBtn);
+                } else {
+                    simulateInteraction(skipBtn);
+                }
                 debug('Bypassed ad using skip button');
             }, 250);
         } else if (adIndicator) {
             video.currentTime = video.duration;
             debug('Forcefully ended the current ad');
         }
+    };
+
+    const simulateTouchEvent = (element) => {
+        const touch = new Touch({
+            identifier: Date.now(),
+            target: element,
+            clientX: 12,
+            clientY: 34,
+            radiusX: 56,
+            radiusY: 78,
+            rotationAngle: 0,
+            force: 1
+        });
+
+        const touchStartEvent = new TouchEvent('touchstart', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            touches: [touch],
+            targetTouches: [touch],
+            changedTouches: [touch]
+        });
+
+        const touchEndEvent = new TouchEvent('touchend', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            touches: [],
+            targetTouches: [],
+            changedTouches: [touch]
+        });
+
+        element.dispatchEvent(touchStartEvent);
+        element.dispatchEvent(touchEndEvent);
     };
 
     const enhanceYouTubeExperience = () => {
